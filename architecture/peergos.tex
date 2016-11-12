@@ -118,7 +118,7 @@
 \subsection*{Goals}
 Peergos aims to give people back control over their data and communications. It is a private, secure place to store files, share files and communicate, but without exposing data or the freindship graph to any third parties. 
 
-To do this it needs a fully decentralized architecture without any central dependencies, strong crypto, and strongmetadata protection. 
+To do this it needs a fully decentralized architecture without any central dependencies, strong crypto, and strong metadata protection. 
 
 \section*{Components}
 Peergos is composed of several layers:
@@ -133,7 +133,7 @@ Peergos is composed of several layers:
 \end{enumerate}
 
 \subsection*{InterPlanetary Filesystem (IPFS)}
-IPFS [\ref{IPFS}] forms the peer-to-peer content addressed storage layer. All data except for the usernames and follow requests in layer 6 are stored here. 
+IPFS [\ref{IPFS}] forms the peer-to-peer, content-addressed storage layer. All data except for the usernames and follow requests in layer 6 are stored here. 
 
 % diagram (hash => data)
 
@@ -165,7 +165,7 @@ The data structure holding the cryptographic links forming the directory and fil
 
 Each file or folder has a base symmetric key which is required to read the file or folder contents. Inheritance of read access is controlled with \emph{symmetric links}. A symmetric link is just a target symmetric key encrypted with a source symmetric key.
 
-In the case of a file There is a symmetric link to the encryption key used for the data, and a symmetric link to the parent folder's metadata key. The parent links are used to deduce the absolute path of a file or folder. They enable someone with read access to a file to decrypt the name of all the ancestor folders up to the root. However this does not grant read access to any sibling files or folders ro any properties thereof.
+In the case of a file there is a symmetric link to the encryption key used for the data, and a symmetric link to the parent folder's metadata key. The parent links are used to deduce the absolute path of a file or folder. They enable someone with read access to a file to decrypt the name of all the ancestor folders up to the root. However this does not grant read access to any sibling files or folders or any properties thereof.
 
 For example, someone with access to
 
@@ -175,6 +175,8 @@ cannot see that there is also a sibling folder called
 
 /bob/trip-with-clair
 
+A directory has a separate symmetric link to each of it's children files/folders. 
+
 
 \subsubsection*{Read/write access}
 To grant someone read access to a file or folder, one needs only to send them the (writing public key, btree label, symmetric base key). This can be done out of band using a public link, or in band using Peergos' sharing mechanism which is discussed later. The combination of these three things is called a read capability or CAP. If instead of just the public writign key, we also included the private key, then the capability would grant write access to the holder. 
@@ -183,23 +185,46 @@ To grant someone read access to a file or folder, one needs only to send them th
 To login the password is salted with the username and run through the Scrypt [\ref{Scrypt}] memory hard hashing function. This is designed to take ~1 second on consumer devices, but be sufficient to make brute force attempts infeasible (even to nation states). 
 
 \section*{Sharing}
-
 \subsection*{Follow requests}
+When a user sends a follow request to another user they are just sending a read capability to a folder, encrypted from a one time key-pair to the target user's public key. For example, when Bob sends a follow request to Alice, he sends a read capability to,
+
+/bob/shared/alice/
+
+If Alice decides to reciprocate, she will send a corresponding capability to,
+
+/alice/shared/bob/
+
+After this point, the friendship is established and sharing files just requires putting a link in the owners folder. For example bob could share /bob/ebooks/EuclidsElements.pdf by putting a link to it in /bob/shared/alice/
+
+This enables one-way (following) or bi-directional (friends) relationships that are not visible to the network. Of course to defend against adversaries monitoring the network connections in realtime we need to be careful about how we make requests through IPFS for other users files (or indeed serve them up ourselves to the network if desired). This is solved using an anonymity framework like I2P or Tor. 
 
 \subsection*{Public links}
+A public link is just a capability encoded into a URL. This can be a read or write CAP. For example:
+
 https://demo.peergos.net/\#2bBmCQkozeJnS6Cd34Gyw9XQgt5dCYG7epgxVi2FR2AuqX5kv5oDhc888UtUnRjpWTPoiyLcE1Hgt4PnKCMozEMYkHn/9UgJeiLDeMryQKofuyL8kYjSRHrMF7vPXNwtfHucvpVu/2fi76jaRwDdEnBdWbKzZtXzuuFgakt6ffvEBE9rfnr3TXD
 
+Including all the material after the \# means that browsing to a link doesn't expose the shared file to the network. All the decryption happens locally in the browser. 
 
+\section*{Security}
 \subsection*{Plausible deniability}
 
 \subsection*{Post quantum}
+The entire filesystem is encrypted using symmetric encryption which is currently thought to be resistant to quantum computer based attacks. Asymmetric encryption is only used to control writes, and to share CAPs between users. Therefore an attacker with a powerful quantum computer would be able to read only files that have been shared between users (and only if they had logged the origination follow request), and would also be able to delete any users filesystem by updating their root hash in IPNS. Any files that have not been shared should therefore be safe from quantum decrption attacks. As soon as a suitable post quantum algorithm is available we will migrate the asymmetric crypto it use it. 
 
 \section*{Threat models}
 
 \subsection*{Passive network adversary}
 \subsection*{Active network adversary}
 \subsection*{Casual user}
-\subsection*{Security conscious user}%phrase TBC
+A casual user is defined as one who is willing to trust the SSL certificate architecture. They are able to use Peergos by using a standard web browser to access a public Peergos server over https. All encryption is done client side in Javascript.
+
+\subsection*{Security conscious user}
+A more cautious user has several options. They can,
+\begin{enumerate}
+\item run a peergos server locally and browse to it over localhost
+\item use the local client applitation
+\item use the FUSE mounting and use normal native apps to write into their Peergos space
+\end{enumerate}
 
 \section*{Conclusion}
 
