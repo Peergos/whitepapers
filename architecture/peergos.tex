@@ -121,10 +121,10 @@ Peergos aims to give people back control over their data and communications. It 
 To do this it needs a fully decentralized architecture without any central dependencies, strong crypto, and strongmetadata protection. 
 
 \section*{Components}
-Peergos is composed of several layers.
+Peergos is composed of several layers:
 
 \begin{enumerate}
-\item A content addressed peer-to-peer storage layer
+\item A content addressed, peer-to-peer storage layer
 \item Erasure codes for redundancy and fault tolerance
 \item A mutable layer containing pointers into the immutable layer, with writes controlled by public-key cryptography
 \item Strong encryption
@@ -133,7 +133,9 @@ Peergos is composed of several layers.
 \end{enumerate}
 
 \subsection*{InterPlanetary Filesystem (IPFS)}
-IPFS forms the peer-to-peer content addressed storage layer. All data except for the usernames and follow requests in layer 6 are stored here. 
+IPFS [\ref{IPFS}] forms the peer-to-peer content addressed storage layer. All data except for the usernames and follow requests in layer 6 are stored here. 
+
+% diagram (hash => data)
 
 When a block of data is written to IPFS a hash of the data is returned (currently SHA2-256). This hash is then the address of that data. Any IPFS node can ask the network for a hash, and any node that has the data corresponding to that hash can serve it. Due to the immutability, data can be cached forever. 
 
@@ -142,35 +144,55 @@ As well as raw data, objects in IPFS can also have links to other objects via th
 \subsection*{InterPlanetary Naming System (IPNS)}
 IPNS is essentially a mapping from public key to a hash. Each update to the hash is signed by the private key corresponding to the public key. 
 
+% diagram (public-key => hash)
+
 \subsection*{Core Node}
 The core nodes handle the unique mapping from username to public key, as well as storing any pending follow requests. Currently this is a central server, but this will eventually be replaced by a distributed blockchain. 
 
-\section*{Cryptography}
-All cryptography currently uses TweetNaCl (salsa20 + poly1305 and Ed25519/Curve25519). 
+% diagram (username <=> public key, username => follow requests)
 
-\subsection*{Primitives}
-The cryptographic primitives used are those of TweetNaCl, secretbox, secretbox\_open, sign, unsign, box, box\_open.
+\section*{Cryptography}
+All cryptography currently uses TweetNaCl (salsa20 + poly1305 and Ed25519/Curve25519). All encryption is performed client side. The asymmetric encryption will migrate to a post-quantum algortihm as soon as a clear candidate arrives. 
+
+% diagram (chunk -> encrypted chunk -> fragments -> erasure coding)
+
+Each file is split into chunks of up to 5MiB which are each encrypted, then split and erasure coded into 60 fragments. The metadata of chunks, files and directories is stored in a separate encrypted blob. This includes filenames, modification times, sizes etc. All chunks are stored in a content-addressed btree in IPFS. The key to lookup a chunk in a btree is an arbitrary 32 byte label. The location of a chunk is then given by the public key controlling writes to the subtree (which point to the btree's root hash) and the 32 byte label. All the network can see is the size of the btree, but even this can be obscured by padding and filling with extra data/chunks. 
 
 \subsection*{Cryptree}
-%metadata hiding
+The data structure holding the cryptographic links forming the directory and file structure is called Cryptree [\ref{Cryptree}]. Cryptree hides the directory structure, and metadata of the filesystem, whilst also controlling read access. 
 
-\subsubsection*{Read access}
+% diagram
 
-\subsection*{Capabilities}
+Each file or folder has a base symmetric key which is required to read the file or folder contents. Inheritance of read access is controlled with \emph{symmetric links}. A symmetric link is just a target symmetric key encrypted with a source symmetric key.
+
+In the case of a file There is a symmetric link to the encryption key used for the data, and a symmetric link to the parent folder's metadata key. The parent links are used to deduce the absolute path of a file or folder. They enable someone with read access to a file to decrypt the name of all the ancestor folders up to the root. However this does not grant read access to any sibling files or folders ro any properties thereof.
+
+For example, someone with access to
+
+/bob/holiday-with-alice/
+
+cannot see that there is also a sibling folder called
+
+/bob/trip-with-clair
+
+
+\subsubsection*{Read/write access}
+To grant someone read access to a file or folder, one needs only to send them the (writing public key, btree label, symmetric base key). This can be done out of band using a public link, or in band using Peergos' sharing mechanism which is discussed later. The combination of these three things is called a read capability or CAP. If instead of just the public writign key, we also included the private key, then the capability would grant write access to the holder. 
 
 \subsection*{Login}
-
-\subsection*{Plausible deniability}
-
-\subsection*{Post quantum}
-
-\section*{Write access}
+To login the password is salted with the username and run through the Scrypt [\ref{Scrypt}] memory hard hashing function. This is designed to take ~1 second on consumer devices, but be sufficient to make brute force attempts infeasible (even to nation states). 
 
 \section*{Sharing}
 
 \subsection*{Follow requests}
 
 \subsection*{Public links}
+https://demo.peergos.net/\#2bBmCQkozeJnS6Cd34Gyw9XQgt5dCYG7epgxVi2FR2AuqX5kv5oDhc888UtUnRjpWTPoiyLcE1Hgt4PnKCMozEMYkHn/9UgJeiLDeMryQKofuyL8kYjSRHrMF7vPXNwtfHucvpVu/2fi76jaRwDdEnBdWbKzZtXzuuFgakt6ffvEBE9rfnr3TXD
+
+
+\subsection*{Plausible deniability}
+
+\subsection*{Post quantum}
 
 \section*{Threat models}
 
