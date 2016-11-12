@@ -63,7 +63,7 @@
 
 % Include your paper's title here
 
-\title{Peergos} 
+\title{Peergos Architecture} 
 
 
 % Place the author information here.  Please hand-code the contact
@@ -73,13 +73,12 @@
 % settings shown here.
 
 \author
-{John Smith,$^{1\ast}$ Jane Doe,$^{1}$ Joe Scientist$^{2}$\\
+{Ian Preston,$^{1\ast}$ Christoph Boddy,$^{1}$ Kevin O'Dwyer$^{1}$\\
 \\
-\normalsize{$^{1}$Department of Chemistry, University of Wherever,}\\
-\normalsize{An Unknown Address, Wherever, ST 00000, USA}\\
-\normalsize{$^{2}$Another Unknown Address, Palookaville, ST 99999, USA}\\
+\normalsize{$^{1}$Peergos Foundation,}\\
+\normalsize{Oxford, UK}\\
 \\
-\normalsize{$^\ast$To whom correspondence should be addressed; E-mail:  jsmith@wherever.edu.}
+\normalsize{$^\ast$Correspondence to; e-mail:  ianopolous@gmail.com.}
 }
 
 % Include the date command, but leave its argument blank.
@@ -115,19 +114,42 @@
 
 \subsection*{Motivation}
 
+
 \subsection*{Goals}
+Peergos aims to give people back control over their data and communications. It is a private, secure place to store files, share files and communicate, but without exposing data or the freindship graph to any third parties. 
+
+To do this it needs a fully decentralized architecture without any central dependencies, strong crypto, and strongmetadata protection. 
 
 \section*{Components}
+Peergos is composed of several layers.
 
-\subsection*{IPFS}
+\begin{enumerate}
+\item A content addressed peer-to-peer storage layer
+\item Erasure codes for redundancy and fault tolerance
+\item A mutable layer containing pointers into the immutable layer, with writes controlled by public-key cryptography
+\item Strong encryption
+\item A cryptographic sharing mechanism for granting read or write access to a file
+\item A username registry for looking up public keys and sending follow requests
+\end{enumerate}
 
-\subsection*{IPNS}
+\subsection*{InterPlanetary Filesystem (IPFS)}
+IPFS forms the peer-to-peer content addressed storage layer. All data except for the usernames and follow requests in layer 6 are stored here. 
+
+When a block of data is written to IPFS a hash of the data is returned (currently SHA2-256). This hash is then the address of that data. Any IPFS node can ask the network for a hash, and any node that has the data corresponding to that hash can serve it. Due to the immutability, data can be cached forever. 
+
+As well as raw data, objects in IPFS can also have links to other objects via their hash. In this way a merkle-tree can be constructed with a single root hash. 
+
+\subsection*{InterPlanetary Naming System (IPNS)}
+IPNS is essentially a mapping from public key to a hash. Each update to the hash is signed by the private key corresponding to the public key. 
 
 \subsection*{Core Node}
+The core nodes handle the unique mapping from username to public key, as well as storing any pending follow requests. Currently this is a central server, but this will eventually be replaced by a distributed blockchain. 
 
 \section*{Cryptography}
+All cryptography currently uses TweetNaCl (salsa20 + poly1305 and Ed25519/Curve25519). 
 
 \subsection*{Primitives}
+The cryptographic primitives used are those of TweetNaCl, secretbox, secretbox\_open, sign, unsign, box, box\_open.
 
 \subsection*{Cryptree}
 %metadata hiding
